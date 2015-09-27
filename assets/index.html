@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>goregen demo</title>
+    <style>
+        body {
+        font-family: sans-serif;
+        }
+
+        input#regex {
+        font-family: monospace;
+        font-size: large;
+        }
+
+        .error {
+        color: #f00;
+        }
+
+        .results {
+        margin-top: 1em;
+        }
+
+        .result {
+        font-family: monospace;
+        }
+
+        .info {
+        padding-left: 1em;
+        padding-top: 1em;
+        padding-bottom: 1em;
+        }
+
+        .info-header {
+        margin-right: 1em;
+        font-weight: bold;
+        font-size: small;
+        }
+
+        .example {
+        margin-left: 2em;
+        }
+        .example code {
+        border: 1px solid black;
+        padding: .5em;
+        margin: .5em;
+        display: inline-block;
+        }
+
+        footer {
+        margin-top: 1em;
+        font-style: italic;
+        font-size: small;
+        }
+    </style>
+</head>
+<body>
+
+<div>
+    <form method="get">
+        <label for="regex">Generate strings matching:</label>
+        <input type="text" size="40" value="{{ .Regex }}" id="regex" name="{{ .RegexFieldName }}">
+        <input type="submit" value="Submit">
+    </form>
+</div>
+
+{{ with .ErrorMsg }}
+<span class="error">{{ . }}</span>
+{{ end }}
+
+{{ with .Outputs }}
+<div class="results">
+    Results:
+    <ul>
+        {{ range . }}
+        <li class="result">{{ . }}</li>
+        {{ end }}
+    </ul>
+</div>
+{{ end }}
+
+<div class="info">
+    <span class="info-header">REST API</span>
+    Make a <code>GET</code> request with the <code>Accept: application/json</code> header to get a JSON array of
+    strings:
+    <br/>
+    <span class="example"><code>curl -H "Accept: application/json" '<script>document.write(window.location.href)</script>'</code>
+    </span>
+</div>
+
+<footer>
+    Uses <a href="https://github.com/zach-klippenstein/goregen">goregen</a>, a Go library for generating random strings
+    from regular expressions.
+</footer>
+
+</body>
+</html>
