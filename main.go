@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	RegexFieldName = "regex"
+	RegexFieldName  = "regex"
 	RegexSuggestion = `Hello,? (world|you( (fantastic|wonderful|amazing) (human|person|individual))?)[.!]`
 
 	DefaultOutputCount = 5
@@ -41,10 +41,13 @@ type Data struct {
 
 	// If Regex could be parsed, contains the results of running the generator.
 	Outputs []string
+
+	AnalyticsID string
 }
 
 var (
-	ListenPort = flag.Uint("port", 8080, "port to listen on")
+	ListenPort  = flag.Uint("port", 8080, "port to listen on")
+	AnalyticsID = flag.String("analytics-id", "", "optional ID to use for analytics tracking")
 )
 
 var router *mux.Router
@@ -80,6 +83,7 @@ func getHtml(w http.ResponseWriter, req *http.Request) {
 
 	data := Data{
 		RegexFieldName: RegexFieldName,
+		AnalyticsID:    *AnalyticsID,
 	}
 
 	regex, results, err := generateOutput(req)
