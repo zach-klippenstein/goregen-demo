@@ -17,6 +17,15 @@
         color: #f00;
         }
 
+        .suggestion {
+        margin: .5em;
+        font-size: small;
+        font-style: italic;
+        }
+        .suggestion a {
+        text-decoration: none;
+        }
+
         .results {
         margin-top: 1em;
         }
@@ -67,6 +76,12 @@
 
 {{ with .ErrorMsg }}
 <span class="error">{{ . }}</span>
+{{ end }}
+
+{{ if .Suggestion }}
+<div class="suggestion">
+    Need an idea? Try <code><a href="{{ .SuggestionUrl }}">{{ .Suggestion }}</a></code>
+</div>
 {{ end }}
 
 {{ with .Outputs }}

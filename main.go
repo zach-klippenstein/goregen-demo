@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -18,6 +19,7 @@ import (
 
 const (
 	RegexFieldName = "regex"
+	RegexSuggestion = `Hello,? (world|you( (fantastic|wonderful|amazing) (human|person|individual))?)[.!]`
 
 	DefaultOutputCount = 5
 	MaxOutputCount     = 100
@@ -30,6 +32,10 @@ type Data struct {
 	// Set to the regex passed in RegexFieldName, or empty.
 	Regex string
 
+	// Used to provide an example regex to use if no regex is specified.
+	Suggestion    string
+	SuggestionUrl string
+
 	// If Regex could not be parsed, contains the error message.
 	ErrorMsg string
 
@@ -41,17 +47,20 @@ var (
 	ListenPort = flag.Uint("port", 8080, "port to listen on")
 )
 
+var router *mux.Router
+
 func main() {
 	flag.Parse()
 
-	router := mux.NewRouter()
+	router = mux.NewRouter()
 
 	router.HandleFunc("/", getJson).
 		Methods("GET").
 		HeadersRegexp("Accept", "application/json")
 
 	router.HandleFunc("/", getHtml).
-		Methods("GET")
+		Methods("GET").
+		Name("query")
 
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
 	http.Handle("/", loggedRouter)
@@ -77,6 +86,8 @@ func getHtml(w http.ResponseWriter, req *http.Request) {
 	data.Regex = regex
 	if err != nil {
 		data.ErrorMsg = err.Error()
+	} else if regex == "" {
+		data.Suggestion, data.SuggestionUrl = generateSuggestion()
 	} else {
 		data.Outputs = results
 	}
@@ -115,6 +126,17 @@ func generateOutput(req *http.Request) (regex string, results []string, err erro
 		}
 	}
 
+	return
+}
+
+func generateSuggestion() (regex, queryUrlString string) {
+	if queryUrl, err := router.Get("query").URLPath(); err == nil {
+		regex = RegexSuggestion
+		values := url.Values{}
+		values.Set(RegexFieldName, regex)
+		queryUrl.RawQuery = values.Encode()
+		queryUrlString = queryUrl.String()
+	}
 	return
 }
 
