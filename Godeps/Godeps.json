@@ -1,6 +1,9 @@
 {
 	"ImportPath": "github.com/zach-klippenstein/goregen-demo",
 	"GoVersion": "go1.5.1",
+	"Packages": [
+		"."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/gorilla/context",
