@@ -71,10 +71,10 @@ func getHtml(w http.ResponseWriter, req *http.Request) {
 	}
 
 	regex, results, err := generateOutput(req)
+	data.Regex = regex
 	if err != nil {
 		data.ErrorMsg = err.Error()
 	} else {
-		data.Regex = regex
 		data.Outputs = results
 	}
 
