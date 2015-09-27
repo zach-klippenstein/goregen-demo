@@ -5,3 +5,6 @@ go:
 
 env:
   - GO15VENDOREXPERIMENT=1
+
+script:
+  - go test $(go list ./... | grep -v /vendor/)
