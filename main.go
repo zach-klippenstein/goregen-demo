@@ -3,16 +3,17 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/zach-klippenstein/goregen"
-"fmt"
 )
 
 const (
@@ -53,7 +54,9 @@ func main() {
 		Methods("GET")
 
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
-	http.ListenAndServe(fmt.Sprintf(":%d", *ListenPort), loggedRouter)
+	http.Handle("/", loggedRouter)
+
+	log.Println(http.ListenAndServe(fmt.Sprintf(":%d", *ListenPort), nil))
 }
 
 func getHtml(w http.ResponseWriter, req *http.Request) {
