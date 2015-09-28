@@ -8,6 +8,11 @@
         font-family: sans-serif;
         }
 
+        .form-row {
+        margin-top: .5em;
+        margin-bottom: .5em;
+        }
+
         input#regex {
         font-family: monospace;
         font-size: large;
@@ -68,28 +73,34 @@
 
 <div>
     <form method="get">
+        <div class="form-row">
         <label for="regex">Generate strings matching:</label>
-        <input type="text" size="40" value="{{ .Regex }}" id="regex" name="{{ .RegexFieldName }}">
-        <input type="submit" value="Submit">
+        <input type="text" size="40" id="regex" name="Regex" value="{{.Regex}}"/>
+        </div>
+        <div class="form-row">
+        <label for="count">Number of results:</label>
+        <input type="number" id="count" name="Count" value="{{.Count}}" min="{{.MinCount}}" max="{{.MaxCount}}"/>
+        </div>
+        <input type="submit" value="Submit"/>
     </form>
 </div>
 
 {{ with .ErrorMsg }}
-<span class="error">{{ . }}</span>
+<span class="error">{{.}}</span>
 {{ end }}
 
 {{ if .Suggestion }}
 <div class="suggestion">
-    Need an idea? Try <code><a href="{{ .SuggestionUrl }}">{{ .Suggestion }}</a></code>
+    Need an idea? Try <code><a href="{{.SuggestionUrl}}">{{.Suggestion}}</a></code>
 </div>
 {{ end }}
 
-{{ with .Outputs }}
+{{ with .Results }}
 <div class="results">
     Results:
     <ul>
         {{ range . }}
-        <li class="result">{{ . }}</li>
+        <li class="result">{{.}}</li>
         {{ end }}
     </ul>
 </div>
@@ -116,7 +127,7 @@
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
   })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-  ga('create', '{{ . }}', 'auto');
+  ga('create', '{{.}}', 'auto');
   ga('send', 'pageview');
 
 </script>

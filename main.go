@@ -10,37 +10,46 @@ import (
 	_ "net/http/pprof"
 	"net/url"
 	"os"
-	"strconv"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	"github.com/zach-klippenstein/goregen"
 )
 
 const (
-	RegexFieldName  = "regex"
 	RegexSuggestion = `Hello,? (world|you( (fantastic|wonderful|amazing) (human|person|individual))?)[.!]`
 
 	DefaultOutputCount = 5
-	MaxOutputCount     = 100
+	MaxOutputCount     = 1000
 )
 
-type Data struct {
-	// Name of the query field for the regex.
-	RegexFieldName string
-
+type InputData struct {
 	// Set to the regex passed in RegexFieldName, or empty.
 	Regex string
 
+	// Number of results to generate.
+	Count uint
+}
+
+var inputDecoder = schema.NewDecoder()
+
+type OutputData struct {
+	InputData
+
 	// Used to provide an example regex to use if no regex is specified.
+	// Either both will be empty, or both non-empty.
 	Suggestion    string
 	SuggestionUrl string
+
+	MinCount uint
+	MaxCount uint
 
 	// If Regex could not be parsed, contains the error message.
 	ErrorMsg string
 
 	// If Regex could be parsed, contains the results of running the generator.
-	Outputs []string
+	Results []string
 
 	AnalyticsID string
 }
@@ -81,19 +90,20 @@ func getHtml(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	data := Data{
-		RegexFieldName: RegexFieldName,
-		AnalyticsID:    *AnalyticsID,
+	data := OutputData{
+		MinCount:    1,
+		MaxCount:    MaxOutputCount,
+		AnalyticsID: *AnalyticsID,
 	}
 
-	regex, results, err := generateOutput(req)
-	data.Regex = regex
+	input, results, err := generateOutput(req)
+	data.InputData = input
 	if err != nil {
 		data.ErrorMsg = err.Error()
-	} else if regex == "" {
+	} else if input.Regex == "" {
 		data.Suggestion, data.SuggestionUrl = generateSuggestion()
 	} else {
-		data.Outputs = results
+		data.Results = results
 	}
 
 	templ.Execute(w, &data)
@@ -112,19 +122,22 @@ func getJson(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func generateOutput(req *http.Request) (regex string, results []string, err error) {
-	if regex = req.FormValue(RegexFieldName); regex != "" {
-		log.Printf("got regex: /%s/", regex)
+func generateOutput(req *http.Request) (input InputData, results []string, err error) {
+	if err = req.ParseForm(); err != nil {
+		return
+	}
+	inputDecoder.Decode(&input, req.Form)
+	log.Printf("got form data: %#v", input)
 
+	if input.Regex != "" {
 		var gen regen.Generator
-		gen, err = regen.NewGenerator(regex, &regen.GeneratorArgs{})
+		gen, err = regen.NewGenerator(input.Regex, &regen.GeneratorArgs{})
 		if err != nil {
 			return
 		} else {
-			count := getCountOrDefault(req)
-			var i uint
+			count := sanitizeCount(&input.Count)
 			log.Printf("generating %d outputs...", count)
-			for i = 0; i < count; i++ {
+			for i := 0; i < count; i++ {
 				results = append(results, gen.Generate())
 			}
 		}
@@ -133,32 +146,22 @@ func generateOutput(req *http.Request) (regex string, results []string, err erro
 	return
 }
 
+func sanitizeCount(count *uint) int {
+	if *count > MaxOutputCount {
+		*count = MaxOutputCount
+	} else if *count == 0 {
+		*count = DefaultOutputCount
+	}
+	return int(*count)
+}
+
 func generateSuggestion() (regex, queryUrlString string) {
 	if queryUrl, err := router.Get("query").URLPath(); err == nil {
 		regex = RegexSuggestion
 		values := url.Values{}
-		values.Set(RegexFieldName, regex)
+		values.Set("Regex", regex)
 		queryUrl.RawQuery = values.Encode()
 		queryUrlString = queryUrl.String()
 	}
 	return
-}
-
-func getCountOrDefault(req *http.Request) uint {
-	rawCount := req.FormValue("count")
-	if rawCount != "" {
-		count, err := strconv.ParseUint(rawCount, 0, 32)
-		if err != nil {
-			log.Println("invalid count:", rawCount)
-			return DefaultOutputCount
-		}
-		if count > MaxOutputCount {
-			return MaxOutputCount
-		} else if count == 0 {
-			return 1
-		}
-		return uint(count)
-	}
-
-	return DefaultOutputCount
 }
