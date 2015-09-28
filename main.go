@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 
+	"regexp/syntax"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -24,12 +26,36 @@ const (
 	MaxOutputCount     = 1000
 )
 
+type CheckState bool
+
+func (s CheckState) String() string {
+	if s {
+		return "checked"
+	}
+	return ""
+}
+
+func (s CheckState) GoString() string {
+	if s {
+		return "true"
+	}
+	return "false"
+}
+
 type InputData struct {
 	// Set to the regex passed in RegexFieldName, or empty.
 	Regex string
 
 	// Number of results to generate.
 	Count uint
+
+	// regexp.syntax flags.
+	FoldCase  CheckState
+	ClassNL   CheckState
+	DotNL     CheckState
+	OneLine   CheckState
+	NonGreedy CheckState
+	PerlX     CheckState
 }
 
 var inputDecoder = schema.NewDecoder()
@@ -131,7 +157,28 @@ func generateOutput(req *http.Request) (input InputData, results []string, err e
 
 	if input.Regex != "" {
 		var gen regen.Generator
-		gen, err = regen.NewGenerator(input.Regex, &regen.GeneratorArgs{})
+		var args regen.GeneratorArgs
+
+		if input.FoldCase {
+			args.Flags |= syntax.FoldCase
+		}
+		if input.ClassNL {
+			args.Flags |= syntax.ClassNL
+		}
+		if input.DotNL {
+			args.Flags |= syntax.DotNL
+		}
+		if input.OneLine {
+			args.Flags |= syntax.OneLine
+		}
+		if input.NonGreedy {
+			args.Flags |= syntax.NonGreedy
+		}
+		if input.PerlX {
+			args.Flags |= syntax.PerlX
+		}
+
+		gen, err = regen.NewGenerator(input.Regex, &args)
 		if err != nil {
 			return
 		} else {

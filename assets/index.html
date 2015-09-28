@@ -13,9 +13,17 @@
         margin-bottom: .5em;
         }
 
-        input#regex {
+        #regex {
         font-family: monospace;
-        font-size: large;
+        font-size: medium;
+        }
+
+        .help-label {
+        font-size: x-small;
+        }
+
+        .check-label {
+        font-size: small;
         }
 
         .error {
@@ -67,6 +75,11 @@
         font-style: italic;
         font-size: small;
         }
+
+        // Icon for links that open in a new window.
+        a[target='_blank']:after {
+        content: ' \25F3';
+        }
     </style>
 </head>
 <body>
@@ -74,25 +87,39 @@
 <div>
     <form method="get">
         <div class="form-row">
-        <label for="regex">Generate strings matching:</label>
-        <input type="text" size="40" id="regex" name="Regex" value="{{.Regex}}"/>
+            <label for="regex">Generate strings matching:</label>
         </div>
         <div class="form-row">
-        <label for="count">Number of results:</label>
-        <input type="number" id="count" name="Count" value="{{.Count}}" min="{{.MinCount}}" max="{{.MaxCount}}"/>
+            <textarea rows="2" cols="60" id="regex" name="Regex">{{.Regex}}</textarea>
+        </div>
+
+        {{ if .Suggestion }}
+        <div class="suggestion">
+            Need an idea? Try <code><a href="{{.SuggestionUrl}}">{{.Suggestion}}</a></code>
+        </div>
+
+        {{ end }}
+        <div class="form-row">
+            <label>Flags:</label>
+            <input type="checkbox" id="FoldCase" name="FoldCase" {{.FoldCase}}/><label for="FoldCase" class="check-label">FoldCase</label>
+            <input type="checkbox" id="ClassNL" name="ClassNL" {{.ClassNL}}/><label for="ClassNL" class="check-label">ClassNL</label>
+            <input type="checkbox" id="DotNL" name="DotNL" {{.DotNL}}/><label for="DotNL" class="check-label">DotNL</label>
+            <input type="checkbox" id="OneLine" name="OneLine" {{.OneLine}}/><label for="OneLine" class="check-label">OneLine</label>
+            <input type="checkbox" id="NonGreedy" name="NonGreedy" {{.NonGreedy}}/><label for="NonGreedy" class="check-label">NonGreedy</label>
+            <input type="checkbox" id="PerlX" name="PerlX" {{.PerlX}}/><label for="PerlX" class="check-label">PerlX</label>
+        </div>
+
+        <div class="form-row">
+            <label for="count">Number of results:</label>
+            <input type="number" id="count" name="Count" value="{{.Count}}" min="{{.MinCount}}" max="{{.MaxCount}}"/>
         </div>
         <input type="submit" value="Submit"/>
+        <a class="help-label" href="https://golang.org/pkg/regexp/syntax" target="_blank">Help</a>
     </form>
 </div>
 
 {{ with .ErrorMsg }}
 <span class="error">{{.}}</span>
-{{ end }}
-
-{{ if .Suggestion }}
-<div class="suggestion">
-    Need an idea? Try <code><a href="{{.SuggestionUrl}}">{{.Suggestion}}</a></code>
-</div>
 {{ end }}
 
 {{ with .Results }}
