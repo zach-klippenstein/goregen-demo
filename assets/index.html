@@ -20,6 +20,7 @@
 
         .help-label {
         font-size: x-small;
+        vertical-align: super;
         }
 
         .check-label {
@@ -88,6 +89,7 @@
     <form method="get">
         <div class="form-row">
             <label for="regex">Generate strings matching:</label>
+            <a class="help-label" href="https://golang.org/pkg/regexp/syntax" target="_blank">Help</a>
         </div>
         <div class="form-row">
             <textarea rows="2" cols="60" id="regex" name="Regex">{{.Regex}}</textarea>
@@ -107,6 +109,7 @@
             <input type="checkbox" id="OneLine" name="OneLine" {{.OneLine}}/><label for="OneLine" class="check-label">OneLine</label>
             <input type="checkbox" id="NonGreedy" name="NonGreedy" {{.NonGreedy}}/><label for="NonGreedy" class="check-label">NonGreedy</label>
             <input type="checkbox" id="PerlX" name="PerlX" {{.PerlX}}/><label for="PerlX" class="check-label">PerlX</label>
+            <a class="help-label" href="https://golang.org/pkg/regexp/syntax/#Flags" target="_blank">Help</a>
         </div>
 
         <div class="form-row">
@@ -114,7 +117,6 @@
             <input type="number" id="count" name="Count" value="{{.Count}}" min="{{.MinCount}}" max="{{.MaxCount}}"/>
         </div>
         <input type="submit" value="Submit"/>
-        <a class="help-label" href="https://golang.org/pkg/regexp/syntax" target="_blank">Help</a>
     </form>
 </div>
 
