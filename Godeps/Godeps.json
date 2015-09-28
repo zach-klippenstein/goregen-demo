@@ -18,6 +18,10 @@
 			"Rev": "49c024275504f0341e5a9971eb7ba7fa3dc7af40"
 		},
 		{
+			"ImportPath": "github.com/gorilla/schema",
+			"Rev": "926ebf09a267e54fbbc610aad956a87595218169"
+		},
+		{
 			"ImportPath": "github.com/zach-klippenstein/goregen",
 			"Rev": "fd051a0cee526ce3a4fee7d56e61f9a03a8454ec"
 		}
