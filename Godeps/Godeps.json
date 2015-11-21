@@ -10,10 +10,6 @@
 			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
 		},
 		{
-			"ImportPath": "github.com/gorilla/handlers",
-			"Rev": "40694b40f4a928c062f56849989d3e9cd0570e5f"
-		},
-		{
 			"ImportPath": "github.com/gorilla/mux",
 			"Rev": "49c024275504f0341e5a9971eb7ba7fa3dc7af40"
 		},
@@ -24,6 +20,18 @@
 		{
 			"ImportPath": "github.com/zach-klippenstein/goregen",
 			"Rev": "fd051a0cee526ce3a4fee7d56e61f9a03a8454ec"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/internal/timeseries",
+			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/trace",
+			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
 		}
 	]
 }

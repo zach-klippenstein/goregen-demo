@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
-
 	"regexp/syntax"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/zach-klippenstein/goregen"
+	"golang.org/x/net/trace"
 )
 
 const (
@@ -47,7 +47,7 @@ type InputData struct {
 	Regex string
 
 	// Number of results to generate.
-	Count uint
+	Count int
 
 	// regexp.syntax flags.
 	FoldCase  CheckState
@@ -100,19 +100,47 @@ func main() {
 		Methods("GET").
 		Name("query")
 
-	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
-	http.Handle("/", loggedRouter)
+	http.Handle("/", router)
 
+	log.Printf("listening on :%d…\n", *ListenPort)
 	log.Println(http.ListenAndServe(fmt.Sprintf(":%d", *ListenPort), nil))
 }
 
-func getHtml(w http.ResponseWriter, req *http.Request) {
-	log.Println("handling html request")
+type Request struct {
+	*http.Request
+
+	tr  trace.Trace
+	log *log.Logger
+}
+
+func WrapRequest(req *http.Request, traceFamily string) *Request {
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		host = req.RemoteAddr
+	}
+
+	prefix := fmt.Sprintf("%s - %s - ", host, traceFamily)
+	return &Request{
+		Request: req,
+		tr:      trace.New(traceFamily, req.URL.Path),
+		log:     log.New(os.Stdout, prefix, log.LstdFlags),
+	}
+}
+
+func (r *Request) Finish() {
+	r.tr.Finish()
+	r.log.Println("request finished.")
+}
+
+func getHtml(w http.ResponseWriter, r *http.Request) {
+	req := WrapRequest(r, "get.html")
+	req.log.Println("handling html request")
+	defer req.Finish()
 
 	templ, err := template.ParseFiles("assets/index.html")
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "error parsing index.html", http.StatusInternalServerError)
+		logError(req, err.Error())
+		http.Error(w, "error parsing template index.html", http.StatusInternalServerError)
 		return
 	}
 
@@ -121,25 +149,49 @@ func getHtml(w http.ResponseWriter, req *http.Request) {
 		MaxCount:    MaxOutputCount,
 		AnalyticsID: *AnalyticsID,
 	}
+	defer templ.Execute(w, &data)
 
-	input, results, err := generateOutput(req)
+	input, err := parseRequest(req)
 	data.InputData = input
+
 	if err != nil {
 		data.ErrorMsg = err.Error()
-	} else if input.Regex == "" {
-		data.Suggestion, data.SuggestionUrl = generateSuggestion()
-	} else {
-		data.Results = results
+		logError(req, fmt.Sprintln("error parsing request:", err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
-	templ.Execute(w, &data)
+	if input.Regex == "" {
+		data.Suggestion, data.SuggestionUrl = generateSuggestion()
+		return
+	}
+
+	results, err := generateOutput(input)
+	if err != nil {
+		data.ErrorMsg = err.Error()
+		logError(req, fmt.Sprintln("error generating output:", err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	data.Results = results
+	return
 }
 
-func getJson(w http.ResponseWriter, req *http.Request) {
-	log.Println("handling json request")
+func getJson(w http.ResponseWriter, r *http.Request) {
+	req := WrapRequest(r, "get.json")
+	req.log.Println("handling json request")
+	defer req.Finish()
 
-	_, results, err := generateOutput(req)
+	input, err := parseRequest(req)
 	if err != nil {
+		logError(req, err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	results, err := generateOutput(input)
+	if err != nil {
+		logError(req, err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -148,13 +200,20 @@ func getJson(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func generateOutput(req *http.Request) (input InputData, results []string, err error) {
+func parseRequest(req *Request) (input InputData, err error) {
 	if err = req.ParseForm(); err != nil {
 		return
 	}
 	inputDecoder.Decode(&input, req.Form)
-	log.Printf("got form data: %#v", input)
+	input.Count = sanitizeCount(input.Count)
 
+	req.log.Printf("got form data: %#v", input)
+	req.tr.LazyPrintf("Input=%#v", input)
+
+	return
+}
+
+func generateOutput(input InputData) (results []string, err error) {
 	if input.Regex != "" {
 		var gen regen.Generator
 		var args regen.GeneratorArgs
@@ -182,9 +241,8 @@ func generateOutput(req *http.Request) (input InputData, results []string, err e
 		if err != nil {
 			return
 		} else {
-			count := sanitizeCount(&input.Count)
-			log.Printf("generating %d outputs...", count)
-			for i := 0; i < count; i++ {
+			log.Printf("generating %d outputs...", input.Count)
+			for i := 0; i < input.Count; i++ {
 				results = append(results, gen.Generate())
 			}
 		}
@@ -193,13 +251,19 @@ func generateOutput(req *http.Request) (input InputData, results []string, err e
 	return
 }
 
-func sanitizeCount(count *uint) int {
-	if *count > MaxOutputCount {
-		*count = MaxOutputCount
-	} else if *count == 0 {
-		*count = DefaultOutputCount
+func logError(req *Request, msg string) {
+	req.log.Println(msg)
+	req.tr.LazyPrintf("%s", msg)
+	req.tr.SetError()
+}
+
+func sanitizeCount(count int) int {
+	if count > MaxOutputCount {
+		count = MaxOutputCount
+	} else if count <= 0 {
+		count = DefaultOutputCount
 	}
-	return int(*count)
+	return count
 }
 
 func generateSuggestion() (regex, queryUrlString string) {
