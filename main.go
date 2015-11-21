@@ -166,7 +166,7 @@ func getHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := generateOutput(input)
+	results, err := generateOutput(req, input)
 	if err != nil {
 		data.ErrorMsg = err.Error()
 		logError(req, fmt.Sprintln("error generating output:", err))
@@ -189,7 +189,7 @@ func getJson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := generateOutput(input)
+	results, err := generateOutput(req, input)
 	if err != nil {
 		logError(req, err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -213,7 +213,7 @@ func parseRequest(req *Request) (input InputData, err error) {
 	return
 }
 
-func generateOutput(input InputData) (results []string, err error) {
+func generateOutput(req *Request, input InputData) (results []string, err error) {
 	if input.Regex != "" {
 		var gen regen.Generator
 		var args regen.GeneratorArgs
@@ -241,7 +241,7 @@ func generateOutput(input InputData) (results []string, err error) {
 		if err != nil {
 			return
 		} else {
-			log.Printf("generating %d outputs...", input.Count)
+			req.log.Printf("generating %d outputs...", input.Count)
 			for i := 0; i < input.Count; i++ {
 				results = append(results, gen.Generate())
 			}
